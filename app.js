@@ -25,7 +25,7 @@ app.use(cookieParser());
 
 app.use(express.static(path.join(__dirname, 'public')));
 
-app.use(orm.express("mysql://root:@localhost/glivertest", {
+app.use(orm.express("mysql://root:@localhost/chat-room", {
     define: function (db, models, next) {
         models.users = db.define("users", {
             email      : String,
