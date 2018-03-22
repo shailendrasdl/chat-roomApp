@@ -1,0 +1,208 @@
+<html>
+    <head>
+        <!-- Latest compiled and minified CSS -->
+        <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/css/bootstrap.min.css">
+        <style>
+
+      .chat
+{
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+.chat li
+{
+    margin-bottom: 10px;
+    padding-bottom: 5px;
+    border-bottom: 1px dotted #B3A9A9;
+}
+
+.chat li.left .chat-body
+{
+    margin-left: 60px;
+}
+
+.chat li.right .chat-body
+{
+    margin-right: 60px;
+}
+
+
+.chat li .chat-body p
+{
+    margin: 0;
+    color: #777777;
+}
+
+.panel .slidedown .glyphicon, .chat .glyphicon
+{
+    margin-right: 5px;
+}
+
+.panel-body
+{
+    overflow-y: scroll;
+    height: 80%;
+}
+
+::-webkit-scrollbar-track
+{
+    -webkit-box-shadow: inset 0 0 6px rgba(0,0,0,0.3);
+    background-color: #F5F5F5;
+}
+
+::-webkit-scrollbar
+{
+    width: 12px;
+    background-color: #F5F5F5;
+}
+
+::-webkit-scrollbar-thumb
+{
+    -webkit-box-shadow: inset 0 0 6px rgba(0,0,0,.3);
+    background-color: #555;
+}
+
+      
+    </style>
+
+        <!-- Latest compiled and minified JavaScript -->
+        <script src="https://ajax.googleapis.com/ajax/libs/jquery/2.1.4/jquery.min.js"></script>
+        <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/js/bootstrap.min.js"></script>
+    </head>
+    <body>
+
+        <div class="container">    
+        
+
+
+        <div class="container">
+    <div class="row">
+        <div class="col-md-7">
+            <div class="panel panel-primary">
+                <div class="panel-heading logined-as">
+                </div>
+                <div class="panel-body">
+                    <ul class="chat" id="messages">
+                    </ul>
+                </div>
+                <div id="typing">
+                </div>
+                <div class="panel-footer">
+                    <div class="input-group" style="width:90%">
+                        <form action="#">
+                            <input id="m" class="form-control" placeholder="Type your message here..." type="text">
+                            <span class="input-group-btn">
+                                <button type="submit" class="btn btn-warning btn-sm" id="btn-chat">
+                                    Send</button>
+                            </span>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-1"></div>
+        <div class="col-md-4">
+            <div class="panel panel-primary">
+                <div class="panel-heading">
+                    Online Users
+                </div>
+                <div class="panel-body">
+                    <ul class="" id="users">
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+
+        <script src="https://cdn.socket.io/socket.io-1.2.0.js"></script>
+        <script src="http://code.jquery.com/jquery-1.11.1.js"></script>
+        <script>
+            $.ajax({url: "/user/get", success: function(result){
+                var username = result.firstname+" "+result.lastname;
+                socket.emit('add user', username);
+                $(".logined-as").text(username);
+               $('form').submit(function(){
+                    socket.emit('chat message', {user:username, message:$('#m').val()});
+                    $('#m').val('');
+                    return false;
+                });
+                socket.on('chat message', function(msg){
+                    var message = '<li class="left clearfix">'
+                            + '<div class="chat-body clearfix">'
+                                + '<p><strong class="primary-font">'+msg.user+' : </strong>'+msg.message+'</p>'
+                            + '</div>'
+                        + '</li>';
+                    $('#messages').append(message);
+                });
+                // Whenever the server emits 'user joined', log it in the chat body
+                socket.on('user joined', function (data) {
+                    $("#users").html('');
+                    for(var u in data.onlineUsers) {
+                        var user = '<li>'
+                         + '<p><strong>'+u+'</p>'
+                        +'</li>';
+                        $("#users").append(user);
+                    }
+                });
+
+                socket.on('user left', function (data) {
+                    $("#users").html('');
+                    for(var u in data.onlineUsers) {
+                        var user = '<li>'
+                         + '<p><strong>'+u+'</p>'
+                        +'</li>';
+                        $("#users").append(user);
+                    }
+                });
+
+                socket.on('typing', function (data) {
+                    if(data != username) {
+                        var firstname = data.split(" ")[0];
+                        if($("#typing"+firstname).length == 0) {
+                            $("#typing").append("<p id='typing"+firstname+"'>"+data+" typing...</p>");
+                        } else {
+                            $("#typing"+firstname).html(username+" typing...");
+                        }
+                    }
+                });
+                socket.on('stop typing', function(data) {
+                    var firstname = data.split(" ")[0];
+                    $("#typing"+firstname).remove();
+                });
+
+                var typing = false;
+                var timeout = undefined;
+
+                function timeoutFunction(){
+                  typing = false;
+                  socket.emit("stop typing", username);
+                }
+
+                function onKeyDownNotEnter(){
+                  if(typing == false) {
+                    typing = true
+                    socket.emit("typing", username);
+                    timeout = setTimeout(timeoutFunction, 5000);
+                  } else {
+                    clearTimeout(timeout);
+                    timeout = setTimeout(timeoutFunction, 5000);
+                  }
+
+                }
+                $('#m').on('keypress', function(){
+                    console.log("doen..");
+                    onKeyDownNotEnter();
+                });
+            }});
+          var socket = io();
+        </script>
+    </div>
+    
+
+    </body>
+</html>
